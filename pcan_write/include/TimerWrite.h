@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1-only */
 /*
- * 04_ManualWrite.h - PCANBasic Example: ManualWrite
+ * 06_TimerWrite.h - PCANBasic Example: TimerWrite
  *
  * Copyright (C) 2001-2020  PEAK System-Technik GmbH <www.peak-system.com>
  *
@@ -24,8 +24,9 @@
  */
 #include "linux_interop.h"
 #include "PCANBasic.h"
+#include <thread>
 
-class ManualWrite
+class TimerWrite
 {
 private:
 	/// <summary>
@@ -46,36 +47,63 @@ private:
 	///   "f_clock_mhz=20, nom_brp=5, nom_tseg1=2, nom_tseg2=1, nom_sjw=1, data_brp=2, data_tseg1=3, data_tseg2=1, data_sjw=1"
 	/// </summary>
 	TPCANBitrateFD BitrateFD = const_cast<LPSTR>("f_clock_mhz=20, nom_brp=5, nom_tseg1=2, nom_tseg2=1, nom_sjw=1, data_brp=2, data_tseg1=3, data_tseg2=1, data_sjw=1");
+	/// <summary>
+	/// Timerinterval (ms) for writing
+	/// </summary>
+	const int TimerInterval = 250;
+	/// <summary>
+	/// Shows if DLL was found
+	/// </summary>
+	bool m_DLLFound;
+	/// <summary>
+	/// Used for writing
+	/// </summary>
+	std::thread* m_hTimer;
+	/// <summary>
+	/// Shows if thread run
+	/// </summary>
+	bool m_TimerOn;
 
 public:
-	// ManualWrite constructor
+	// TimerWrite constructor
 	//
-	ManualWrite();
+	TimerWrite();
 
-	// ManualWrite destructor
+	// TimerWrite destructor
 	//
-	~ManualWrite();
+	~TimerWrite();
 
-	void comm_can_set_pos(uint8_t controller_id, float pos);
-
+	TPCANStatus comm_can_set_pos(uint8_t controller_id, float pos);
+	TPCANStatus comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
 
 private:
 	/// <summary>
+	/// Thread function for reading messages
+	/// </summary>
+	void TimerThread();
+
+	/// <summary>
 	/// Function for writing PCAN-Basic messages
 	/// </summary>
-	void WriteMessages(const int & user_input);
+	void WriteMessages();
 
 	/// <summary>
 	/// Function for writing messages on CAN devices
 	/// </summary>
 	/// <returns>A TPCANStatus error code</returns>
-	TPCANStatus WriteMessage(const int & user_input);
+	TPCANStatus WriteMessage();
 
 	/// <summary>
 	/// Function for writing messages on CAN-FD devices
 	/// </summary>
 	/// <returns>A TPCANStatus error code</returns>
 	TPCANStatus WriteMessageFD();
+
+	/// <summary>
+	/// Checks for availability of the PCANBasic labrary
+	/// </summary>
+	/// <returns>If the library was found or not</returns>
+	bool CheckForLibrary();
 
 	/// <summary>
 	/// Shows/prints the configurable parameters for this sample and information about them
@@ -121,6 +149,4 @@ private:
 	/// <param name="bitrate">Bitrate to be converted</param>
 	/// <param name="buffer">A string buffer for the converted bitrate (size MAX_PATH)</param>
 	void ConvertBitrateToString(TPCANBaudrate bitrate, LPSTR buffer);
-	
-	void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
 };

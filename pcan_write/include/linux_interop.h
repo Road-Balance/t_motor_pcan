@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1-only */
 /*
- * RunExample.cpp - Entry point of the 04_ManualWrite PCANBasic example
+ * linux_interop.h - Override Windows functions
  *
  * Copyright (C) 2001-2020  PEAK System-Technik GmbH <www.peak-system.com>
  *
@@ -20,11 +20,29 @@
  *
  * Contact:    <linux@peak-system.com>
  * Maintainer:  Fabrice Vergnaud <f.vergnaud@peak-system.com>
- * 	    	    Romain Tissier <r.tissier@peak-system.com>
+ * Author:      Romain Tissier <r.tissier@peak-system.com>
  */
-#include "ManualWrite.h"
+#pragma once
 
-int main()
-{
-	ManualWrite start;
+#include <iostream>
+#include <limits.h>
+#define MAX_PATH PATH_MAX
+#define sprintf_s snprintf
+#include <cstring>
+#define strcpy_s(destination, destination_size, source) strcpy(destination, source)
+
+#ifndef _getch_stub
+#define _getch_stub
+#include <termios.h>
+#include <unistd.h>
+static int _getch() {
+	struct termios config;
+	tcgetattr(STDIN_FILENO, &config);
+	struct termios saved_config = config;
+	config.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &config);
+	int res = getchar();
+	tcsetattr(STDIN_FILENO, TCSANOW, &saved_config);
+	return res;
 }
+#endif
