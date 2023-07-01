@@ -73,6 +73,7 @@ public:
 	//
 	~TimerWrite();
 
+	void PowerOn();
 	TPCANStatus comm_can_set_pos(uint8_t controller_id, float pos);
 	TPCANStatus comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
 

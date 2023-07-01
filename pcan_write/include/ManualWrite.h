@@ -63,13 +63,13 @@ private:
 	/// <summary>
 	/// Function for writing PCAN-Basic messages
 	/// </summary>
-	void WriteMessages(const int & user_input);
+	void WriteMessages();
 
 	/// <summary>
 	/// Function for writing messages on CAN devices
 	/// </summary>
 	/// <returns>A TPCANStatus error code</returns>
-	TPCANStatus WriteMessage(const int & user_input);
+	TPCANStatus WriteMessage();
 
 	/// <summary>
 	/// Function for writing messages on CAN-FD devices

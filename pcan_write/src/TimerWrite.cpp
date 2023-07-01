@@ -74,14 +74,20 @@ TimerWrite::TimerWrite()
 		return;
 	}
 
+
 	// Writing messages...
 	std::cout << "Successfully initialized.\n";
+
+	PowerOn();
+
 	m_TimerOn = true;
 	m_hTimer = new std::thread(&TimerWrite::TimerThread, this);
+	
 	std::cout << "Started writing messages...\n";
 	std::cout << "\n";
 	std::cout << "For closing: ";
 	std::cout << "Press any key to continue...\n";
+
 	_getch();
 }
 
@@ -103,12 +109,30 @@ void TimerWrite::TimerThread()
 	}
 }
 
+void TimerWrite::PowerOn(){
+	TPCANMsg msgCanMessage;
+
+	msgCanMessage.ID = 0x01;
+	msgCanMessage.LEN = (BYTE)8;
+	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
+	msgCanMessage.DATA[0] = 0xFC;
+	msgCanMessage.DATA[1] = 0xFF;
+	msgCanMessage.DATA[2] = 0xFF;
+	msgCanMessage.DATA[3] = 0xFF;
+	msgCanMessage.DATA[4] = 0xFF;
+	msgCanMessage.DATA[5] = 0xFF;
+	msgCanMessage.DATA[6] = 0xFF;
+	msgCanMessage.DATA[7] = 0xFF;
+
+	CAN_Write(PcanHandle, &msgCanMessage);
+}
+
 void TimerWrite::WriteMessages()
 {
 	TPCANStatus stsResult;
 
-	uint8_t id = 0x01;
-	float pos = 30.0;
+	uint8_t id = 0x601;
+	float pos = 100.0;
 
 	if (IsFD)
 		stsResult = WriteMessageFD();
