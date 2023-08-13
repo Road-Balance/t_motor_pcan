@@ -27,15 +27,7 @@
 
 int main()
 {
-	ManualWrite start;
-	
-	// uint8_t id = 0x01;
-	// float pos = 0.0;
-
-	// std::cout << "Controller ID: " << std::hex << (int)id << std::endl;
-	// std::cout << "Position: " << pos << std::endl;
-
-	// start.comm_can_set_pos(id, pos);
+    auto start_ = std::make_shared<ManualWrite>();
 
 	return 0;
 }

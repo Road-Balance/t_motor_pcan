@@ -24,6 +24,7 @@
  */
 #include "linux_interop.h"
 #include "PCANBasic.h"
+#include <memory>
 
 class ManualWrite
 {
@@ -56,7 +57,7 @@ public:
 	//
 	~ManualWrite();
 
-	void comm_can_set_pos(uint8_t controller_id, float pos);
+	TPCANStatus comm_can_set_pos(uint8_t controller_id, float pos);
 
 
 private:
@@ -122,5 +123,5 @@ private:
 	/// <param name="buffer">A string buffer for the converted bitrate (size MAX_PATH)</param>
 	void ConvertBitrateToString(TPCANBaudrate bitrate, LPSTR buffer);
 	
-	void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
+	TPCANStatus comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
 };

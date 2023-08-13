@@ -161,10 +161,10 @@ TPCANStatus TimerWrite::comm_can_set_pos(uint8_t controller_id, float pos) {
 }
 
 TPCANStatus TimerWrite::comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
-    
+
     if (len > 8)
 		len = 8;
-	
+
 	TPCANMsg msgCanMessage;
 
 	msgCanMessage.ID = id;
@@ -177,9 +177,7 @@ TPCANStatus TimerWrite::comm_can_transmit_eid(uint32_t id, const uint8_t *data, 
         msgCanMessage.DATA[i]=data[i];
 
 	return CAN_Write(PcanHandle, &msgCanMessage);
-
 }
-
 
 TPCANStatus TimerWrite::WriteMessage()
 {

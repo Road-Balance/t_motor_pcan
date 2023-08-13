@@ -46,12 +46,12 @@ link_directories( ${PCANBASIC_ROOT}/lib )
 
 add_executable(pcan_write 
   src/ManualWrite.cpp
-  src/RunExample.cpp 
+  src/main_manual_write.cpp 
 )
 target_link_libraries( pcan_write pcanbasic )
 
 add_executable( pcan_write_timer
   src/TimerWrite.cpp
-  src/RunExampleTimer.cpp 
+  src/main_timer_write.cpp 
 )
 target_link_libraries( pcan_write_timer pcanbasic pthread )

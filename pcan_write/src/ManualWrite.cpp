@@ -102,10 +102,14 @@ void ManualWrite::WriteMessages()
 {
 	TPCANStatus stsResult;
 
+	uint8_t id = 0x601;
+	float pos = 0.0;
+
 	if (IsFD)
 		stsResult = WriteMessageFD();
 	else
-		stsResult = WriteMessage();
+		// stsResult = WriteMessage();
+		stsResult = comm_can_set_pos( id, pos );
 
 	// Checks if the message was sent
 	if (stsResult != PCAN_ERROR_OK)
@@ -114,43 +118,31 @@ void ManualWrite::WriteMessages()
 		std::cout << "Message was successfully SENT\n";
 }
 
-/////////////////// T Motor Part ///////////////////////
+TPCANStatus ManualWrite::comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
 
-
-void ManualWrite::comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
-    
     if (len > 8)
 		len = 8;
 
-    // CanTxMsg TxMessage;
-    // TxMessage.StdId = 0;
-    // TxMessage.IDE = CAN_ID_EXT;
-    // TxMessage.ExtId = id;
-    // TxMessage.RTR = CAN_RTR_DATA;
-    // TxMessage.DLC = len;
-    
 	TPCANMsg msgCanMessage;
 
 	msgCanMessage.ID = id;
-	msgCanMessage.LEN = len;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
+	msgCanMessage.LEN = (BYTE)len;
+
+	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
+	msgCanMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
 
 	for(int i=0; i < len; i++)
         msgCanMessage.DATA[i]=data[i];
 
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-    //memcpy(txmsg.data8, data, len);
-	// CAN_Transmit(CHASSIS_CAN, &TxMessage);
+	return CAN_Write(PcanHandle, &msgCanMessage);
 }
 
 /* Position loop mode */
-void ManualWrite::comm_can_set_pos(uint8_t controller_id, float pos) {
+TPCANStatus ManualWrite::comm_can_set_pos(uint8_t controller_id, float pos) {
     int32_t send_index = 0;
     uint8_t buffer[4];
     buffer_append_int32(buffer, (int32_t)(pos * 1000000.0), &send_index);
-    comm_can_transmit_eid(controller_id |
+    return comm_can_transmit_eid(controller_id |
     ((uint32_t)CAN_PACKET_SET_POS << 8), buffer, send_index);
 }
 
@@ -177,15 +169,11 @@ TPCANStatus ManualWrite::WriteMessage()
 	CAN_Write(PcanHandle, &msgCanMessage);
 
 	printf("Sends a CAN message\n");
+
 	// 48 = 0
 	msgCanMessage.ID = 0x41;
 	msgCanMessage.LEN = (BYTE)4;
 	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
-	// msgCanMessage.DATA[0] = 0x10;
-	// msgCanMessage.DATA[1] = 0x27;
-	// msgCanMessage.DATA[2] = 0x00;
-	// msgCanMessage.DATA[3] = 0x00;
 
 	msgCanMessage.DATA[0] = 0xA0;
 	msgCanMessage.DATA[1] = 0x86;
