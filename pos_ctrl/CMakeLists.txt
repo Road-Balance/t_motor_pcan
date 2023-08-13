@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(pcan_write)
+project(pos_ctrl)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -55,3 +55,9 @@ add_executable( pcan_write_timer
   src/main_timer_write.cpp 
 )
 target_link_libraries( pcan_write_timer pcanbasic pthread )
+
+add_executable( pcan_read_write
+  src/ManualReadWrite.cpp
+  src/main.cpp 
+)
+target_link_libraries( pcan_read_write pcanbasic pthread )

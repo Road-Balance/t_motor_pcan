@@ -22,10 +22,32 @@
  * Maintainer:  Fabrice Vergnaud <f.vergnaud@peak-system.com>
  * 	    	    Romain Tissier <r.tissier@peak-system.com>
  */
-#include "pcan_pub_sub/ManualReadWrite.h"
+#include "ManualReadWrite.h"
 
 #include <chrono>
 #include <thread>
+
+typedef enum {
+    CAN_PACKET_SET_DUTY = 0, //Duty cycle mode
+    CAN_PACKET_SET_CURRENT, //Current loop mode
+    CAN_PACKET_SET_CURRENT_BRAKE, // Current brake mode
+    CAN_PACKET_SET_RPM, //Velocity mode
+    CAN_PACKET_SET_POS, // Position mode
+    CAN_PACKET_SET_ORIGIN_HERE, //Set origin mode
+    CAN_PACKET_SET_POS_SPD, //Position velocity loop mode
+} CAN_PACKET_ID;
+
+void buffer_append_int32(uint8_t* buffer, int32_t number, int32_t *index) {
+    buffer[(*index)++] = number >> 24;
+    buffer[(*index)++] = number >> 16;
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+void buffer_append_int16(uint8_t* buffer, int16_t number, int16_t *index) {
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
 
 ManualReadWrite::ManualReadWrite()
 {
@@ -74,20 +96,52 @@ ManualReadWrite::~ManualReadWrite()
 	CAN_Uninitialize(PCAN_NONEBUS);
 }
 
-void ManualReadWrite::WriteMessages(const int &user_input)
+void ManualReadWrite::WriteMessages(const uint8_t &controller_id, const float &position)
 {
 	TPCANStatus stsResult;
 
 	if (IsFD)
 		stsResult = WriteMessageFD();
 	else
-		stsResult = WriteMessage(user_input);
+		// stsResult = WriteMessage(user_input);
+		stsResult = comm_can_set_pos( controller_id, position );
 
 	// Checks if the message was sent
 	if (stsResult != PCAN_ERROR_OK)
 		ShowStatus(stsResult);
 	else
 		std::cout << "Message was successfully SENT\n";
+}
+
+TPCANStatus ManualReadWrite::comm_can_set_pos(uint8_t controller_id, float pos) {
+    int32_t send_index = 0;
+    uint8_t buffer[4];
+
+	// 10000 = 1 degree
+	// 1000000 = 100 degree 
+    buffer_append_int32(buffer, (int32_t)(pos * 10000.0), &send_index);
+
+	return comm_can_transmit_eid(controller_id |
+    ((uint32_t)CAN_PACKET_SET_POS << 8), buffer, send_index);
+}
+
+TPCANStatus ManualReadWrite::comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
+
+    if (len > 8)
+		len = 8;
+
+	TPCANMsg msgCanMessage;
+
+	msgCanMessage.ID = id;
+	msgCanMessage.LEN = (BYTE)len;
+
+	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
+	msgCanMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
+
+	for(int i=0; i < len; i++)
+        msgCanMessage.DATA[i]=data[i];
+
+	return CAN_Write(PcanHandle, &msgCanMessage);
 }
 
 TPCANStatus ManualReadWrite::WriteMessage(const int & user_input){
@@ -133,198 +187,6 @@ TPCANStatus ManualReadWrite::WriteROS2Message(unsigned char *data, int len, bool
 	return CAN_Write(PcanHandle, &msgCanMessage);
 }
 
-TPCANStatus ManualReadWrite::Wakeup()
-{
-	// Sends a CAN message with extended ID, and 8 data bytes
-	TPCANMsg msgCanMessage;
-
-	// user_input == 49
-	msgCanMessage.ID = 0x000;
-	msgCanMessage.LEN = (BYTE)2;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x81;
-	msgCanMessage.DATA[1] = 0x0A;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	msgCanMessage.ID = 0x000;
-	msgCanMessage.LEN = (BYTE)2;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x81;
-	msgCanMessage.DATA[1] = 0x0B;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	std::cout << "NMT 810A 810B" << std::endl;
-
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-	// user_input == 50
-	msgCanMessage.ID = 0x000;
-	msgCanMessage.LEN = (BYTE)2;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x01;
-	msgCanMessage.DATA[1] = 0x0A;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	msgCanMessage.ID = 0x000;
-	msgCanMessage.LEN = (BYTE)2;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x01;
-	msgCanMessage.DATA[1] = 0x0B;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	std::cout << "NMT 01A 01B" << std::endl;
-
-	// msgCanMessage.ID = 0x70A;
-	// msgCanMessage.LEN = (BYTE)1;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.DATA[0] = 0x00;
-	// CAN_Write(PcanHandle, &msgCanMessage);
-
-	// std::cout << "HTBT 70A 00" << std::endl;
-
-	// // TEMP
-	// msgCanMessage.ID = 0x60A;
-	// msgCanMessage.LEN = (BYTE)8;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.DATA[0] = 0x2B;
-	// msgCanMessage.DATA[1] = 0x0C;
-	// msgCanMessage.DATA[2] = 0x10;
-	// msgCanMessage.DATA[3] = 0x00;
-	// msgCanMessage.DATA[4] = 0x64;
-	// msgCanMessage.DATA[5] = 0x00;
-	// msgCanMessage.DATA[6] = 0x00;
-	// msgCanMessage.DATA[7] = 0x00;
-	// CAN_Write(PcanHandle, &msgCanMessage);
-
-	// std::cout << "18A 3180" << std::endl;
-
-	// msgCanMessage.ID = 0x28A;
-	// msgCanMessage.LEN = (BYTE)2;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.DATA[0] = 0x00;
-	// msgCanMessage.DATA[1] = 0x00;
-	// CAN_Write(PcanHandle, &msgCanMessage);
-
-	// std::cout << "28A 0000" << std::endl;
-
-	// msgCanMessage.ID = 0x60A;
-	// msgCanMessage.LEN = (BYTE)8;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.DATA[0] = 0x2F;
-	// msgCanMessage.DATA[1] = 0x60;
-	// msgCanMessage.DATA[2] = 0x60;
-	// msgCanMessage.DATA[3] = 0x00;
-	// msgCanMessage.DATA[4] = 0x09;
-	// msgCanMessage.DATA[5] = 0x00;
-	// msgCanMessage.DATA[6] = 0x00;
-	// msgCanMessage.DATA[7] = 0x00;
-	// CAN_Write(PcanHandle, &msgCanMessage);
-
-	// msgCanMessage.ID = 0x60B;
-	// msgCanMessage.LEN = (BYTE)8;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.DATA[0] = 0x2F;
-	// msgCanMessage.DATA[1] = 0x60;
-	// msgCanMessage.DATA[2] = 0x60;
-	// msgCanMessage.DATA[3] = 0x00;
-	// msgCanMessage.DATA[4] = 0x09;
-	// msgCanMessage.DATA[5] = 0x00;
-	// msgCanMessage.DATA[6] = 0x00;
-	// msgCanMessage.DATA[7] = 0x00;
-	// CAN_Write(PcanHandle, &msgCanMessage);
-
-	// std::cout << "PDO 6060 09" << std::endl;
-
-	// user_input == 51
-	msgCanMessage.ID = 0x60A;
-	msgCanMessage.LEN = (BYTE)8;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x2B;
-	msgCanMessage.DATA[1] = 0x40;
-	msgCanMessage.DATA[2] = 0x60;
-	msgCanMessage.DATA[3] = 0x00;
-	msgCanMessage.DATA[4] = 0x06;
-	msgCanMessage.DATA[5] = 0x00;
-	msgCanMessage.DATA[6] = 0x00;
-	msgCanMessage.DATA[7] = 0x00;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	msgCanMessage.ID = 0x60B;
-	msgCanMessage.LEN = (BYTE)8;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x2B;
-	msgCanMessage.DATA[1] = 0x40;
-	msgCanMessage.DATA[2] = 0x60;
-	msgCanMessage.DATA[3] = 0x00;
-	msgCanMessage.DATA[4] = 0x06;
-	msgCanMessage.DATA[5] = 0x00;
-	msgCanMessage.DATA[6] = 0x00;
-	msgCanMessage.DATA[7] = 0x00;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	std::cout << "PDO 6040 06" << std::endl;
-
-	// user_input == 52
-	msgCanMessage.ID = 0x60A;
-	msgCanMessage.LEN = (BYTE)8;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x2B;
-	msgCanMessage.DATA[1] = 0x40;
-	msgCanMessage.DATA[2] = 0x60;
-	msgCanMessage.DATA[3] = 0x00;
-	msgCanMessage.DATA[4] = 0x07;
-	msgCanMessage.DATA[5] = 0x00;
-	msgCanMessage.DATA[6] = 0x00;
-	msgCanMessage.DATA[7] = 0x00;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	msgCanMessage.ID = 0x60B;
-	msgCanMessage.LEN = (BYTE)8;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x2B;
-	msgCanMessage.DATA[1] = 0x40;
-	msgCanMessage.DATA[2] = 0x60;
-	msgCanMessage.DATA[3] = 0x00;
-	msgCanMessage.DATA[4] = 0x07;
-	msgCanMessage.DATA[5] = 0x00;
-	msgCanMessage.DATA[6] = 0x00;
-	msgCanMessage.DATA[7] = 0x00;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	std::cout << "PDO 6040 07" << std::endl;
-
-	// user_input == 53
-	msgCanMessage.ID = 0x60A;
-	msgCanMessage.LEN = (BYTE)8;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x2B;
-	msgCanMessage.DATA[1] = 0x40;
-	msgCanMessage.DATA[2] = 0x60;
-	msgCanMessage.DATA[3] = 0x00;
-	msgCanMessage.DATA[4] = 0x0F;
-	msgCanMessage.DATA[5] = 0x00;
-	msgCanMessage.DATA[6] = 0x00;
-	msgCanMessage.DATA[7] = 0x00;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	msgCanMessage.ID = 0x60B;
-	msgCanMessage.LEN = (BYTE)8;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	msgCanMessage.DATA[0] = 0x2B;
-	msgCanMessage.DATA[1] = 0x40;
-	msgCanMessage.DATA[2] = 0x60;
-	msgCanMessage.DATA[3] = 0x00;
-	msgCanMessage.DATA[4] = 0x0F;
-	msgCanMessage.DATA[5] = 0x00;
-	msgCanMessage.DATA[6] = 0x00;
-	msgCanMessage.DATA[7] = 0x00;
-	CAN_Write(PcanHandle, &msgCanMessage);
-
-	std::cout << "PDO 6040 0F" << std::endl;
-
-	return CAN_Write(PcanHandle, &msgCanMessage);
-}
-
 void ManualReadWrite::StartStatusFeedback(){
 	m_ThreadRun = true;
 	m_ReadThread = new std::thread(&ManualReadWrite::ThreadExecute, this);
@@ -345,8 +207,9 @@ TPCANMsg ManualReadWrite::ThreadExecute()
 		printf("========== PCAN_ERROR =========\n");
 	}
 
+	// 여기서부터 안돈다.
 	while (m_ThreadRun)
-	{
+	{	
 		fd_set fds;
 		FD_ZERO(&fds);
 		FD_SET(fd, &fds);
@@ -356,18 +219,14 @@ TPCANMsg ManualReadWrite::ThreadExecute()
 		int err = select(fd+1, &fds, NULL, NULL, NULL);
 		if(err != -1 && FD_ISSET(fd, &fds)){
 			TPCANStatus stsResult = CAN_Read(PcanHandle, &msgCanMessage, &CANTimeStamp);
-			if ( msgCanMessage.ID == 0x48A ){
-				// 여기서의 문제는 아니다.
-				msgCanMessage_left_ = msgCanMessage;
-				// printf("copy\n");
-			}
-			if ( msgCanMessage.ID == 0x48B ){
-				msgCanMessage_right_ = msgCanMessage;
-				// printf("copy\n");
-			}
-			// debug 
-			// if (stsResult != PCAN_ERROR_QRCVEMPTY)
-			// 	ProcessMessageCan(msgCanMessage_, CANTimeStamp);
+			// if ( msgCanMessage.ID == 0x601 ){
+			// 	printf("Feedback Detected!\n");
+			// }
+
+			for (int i = 0; i < 8; i++)
+				printf("%x ", msgCanMessage.DATA[i]);
+
+			printf("\n");
 		}
 	}
 

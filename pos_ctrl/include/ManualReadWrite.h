@@ -32,9 +32,6 @@
 #include <thread>
 #include <mutex>
 
-
-#include "pcan_pub_sub/odometry.hpp"
-
 class ManualReadWrite
 {
 private:
@@ -57,7 +54,6 @@ private:
 	/// </summary>
 	TPCANBitrateFD BitrateFD = const_cast<LPSTR>("f_clock_mhz=20, nom_brp=5, nom_tseg1=2, nom_tseg2=1, nom_sjw=1, data_brp=2, data_tseg1=3, data_tseg2=1, data_sjw=1");
 	
-	diff_drive_controller::Odometry odometry_;
 	std::thread* m_ReadThread;
 	bool m_ThreadRun;
 	TPCANMsg msgCanMessage_left_, msgCanMessage_right_;
@@ -76,11 +72,6 @@ public:
 	/// Function for writing messages on CAN-FD devices 
 	/// </summary>
 	TPCANStatus WriteROS2Message(unsigned char *data, int len, bool is_left);
-
-	/// <summary>
-	/// Function for writing messages on CAN-FD devices
-	/// </summary>
-    TPCANStatus Wakeup();
 
 	void StartStatusFeedback();
 
@@ -106,12 +97,11 @@ public:
 	std::string GetTimeString(TPCANTimestampFD time);
 	std::string GetDataString(BYTE data[], TPCANMessageType msgType, int dataLength);
 
-private:
 	/// <summary>
 	/// Function for writing PCAN-Basic messages
 	/// </summary>
-	void WriteMessages(const int & user_input);
-
+	void WriteMessages(const uint8_t &controller_id, const float &position);
+private:
 	/// <summary>
 	/// Function for writing messages on CAN devices
 	/// </summary>
@@ -237,5 +227,9 @@ private:
 	/// <param name="dataLength">The amount of bytes to take into account wihtin the given data</param>
 	/// <returns>A string with hexadecimal formatted data bytes of a CAN message</returns>
 	// std::string GetDataString(BYTE data[], TPCANMessageType msgType, int dataLength);
+
+	TPCANStatus comm_can_set_pos(uint8_t controller_id, float pos);
+
+	TPCANStatus comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
 
 };
