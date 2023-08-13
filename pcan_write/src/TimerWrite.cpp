@@ -132,7 +132,7 @@ void TimerWrite::WriteMessages()
 	TPCANStatus stsResult;
 
 	uint8_t id = 0x601;
-	float pos = 100.0;
+	float pos = 0.0;
 
 	if (IsFD)
 		stsResult = WriteMessageFD();
@@ -150,7 +150,9 @@ void TimerWrite::WriteMessages()
 TPCANStatus TimerWrite::comm_can_set_pos(uint8_t controller_id, float pos) {
     int32_t send_index = 0;
     uint8_t buffer[4];
-    buffer_append_int32(buffer, (int32_t)(pos * 1000000.0), &send_index);
+	// 10000 = 1 degree
+	// 1000000 = 100 degree 
+    buffer_append_int32(buffer, (int32_t)(pos * 10000.0), &send_index);
     
 	printf("test");
 
@@ -163,27 +165,19 @@ TPCANStatus TimerWrite::comm_can_transmit_eid(uint32_t id, const uint8_t *data, 
     if (len > 8)
 		len = 8;
 	
-    // CanTxMsg TxMessage;
-    // TxMessage.StdId = 0;
-    // TxMessage.IDE = CAN_ID_EXT;
-    // TxMessage.ExtId = id;
-    // TxMessage.RTR = CAN_RTR_DATA;
-    // TxMessage.DLC = len;
-    
 	TPCANMsg msgCanMessage;
 
 	msgCanMessage.ID = id;
 	msgCanMessage.LEN = (BYTE)len;
-	msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
-	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
+
+	// msgCanMessage.MSGTYPE = PCAN_MESSAGE_EXTENDED;
+	msgCanMessage.MSGTYPE = PCAN_MESSAGE_STANDARD;
 
 	for(int i=0; i < len; i++)
         msgCanMessage.DATA[i]=data[i];
 
 	return CAN_Write(PcanHandle, &msgCanMessage);
 
-    //memcpy(txmsg.data8, data, len);
-	// CAN_Transmit(CHASSIS_CAN, &TxMessage);
 }
 
 

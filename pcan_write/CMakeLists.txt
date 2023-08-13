@@ -28,7 +28,7 @@ else()
     message(FATAL_ERROR "Failed to retrieve user name")
 endif()
 
-set(PCANBASIC_ROOT "/home/${USER}/opensg_ros2_ws/src/pcan_api_cpp/libpcanbasic/pcanbasic")
+set(PCANBASIC_ROOT "/home/${USER}/Downloads/peak-linux-driver-8.16.0/libpcanbasic/pcanbasic")
 message("PCANBASIC_ROOT: ${PCANBASIC_ROOT}")
 
 # Get PCAN version

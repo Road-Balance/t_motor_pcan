@@ -40,7 +40,7 @@ private:
 	/// <summary>
 	/// Sets the bitrate for normal CAN devices
 	/// </summary>
-	const TPCANBaudrate Bitrate = PCAN_BAUD_500K;
+	const TPCANBaudrate Bitrate = PCAN_BAUD_1M;
 	/// <summary>
 	/// Sets the bitrate for CAN FD devices.
 	/// Example - Bitrate Nom: 1Mbit/s Data: 2Mbit/s:
